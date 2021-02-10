@@ -1,0 +1,123 @@
+﻿@using Newtonsoft.Json.Linq;  
+
+@{ 
+    string serverID = "";
+
+    JObject data = new JObject();
+
+    data["name"] = "";
+    data["url"] = "";
+    data["type"] = "";
+    data["user"] = "";
+    data["password"] = "";
+
+    if(ViewBag.id != null)
+    {
+        serverID = ViewBag.id;
+        data = ViewBag.data;
+    }
+}
+
+<div>
+    <form method="post" action="@Url.Action("AddEditServer","Manage",null)">
+        <input type="hidden" id="serverID" name="serverID" value="@serverID" />
+
+        <div class="form-group">
+            <label for="servername">Name</label>
+            <input type="text" class="form-control" id="servername" name="name" placeholder="Server Name" value="@data.GetValue("name")">
+        </div>
+        <div class="form-group">
+            <label for="serverURL">URL</label>
+            <input type="text" class="form-control" id="serverURL" name="url" placeholder="URL" value="@data.GetValue("url")">
+        </div>
+        @*<div>
+            @{ 
+                string selected = "";
+            }
+
+            <label for="serverType">Type</label>
+            <select class="form-control" id="serverType" name="type">
+                @{ if (data.GetValue("type").ToString() == "Data Element") { selected = "selected"; }}
+                <!option value="dataElements" @selected>Data Element</!option>
+                @{ if (data.GetValue("type").ToString() == "Indicator") { selected = "selected"; }}
+                <!option value="indicators" @selected>Indicator</!option>
+                @{ if (data.GetValue("type").ToString() == "Program Indicator") { selected = "selected"; }}
+                <!option value="programIndicators"  @selected>Program Indicator</!option>
+            </select>
+        </div>*@
+        <div class="form-group">
+            <label for="servername">Username</label>
+            <input type="text" class="form-control" id="serverUsername" name="user" placeholder="Username" value="@data.GetValue("user")">
+        </div>
+        <div class="form-group">
+            <label for="serverURL">Password</label>
+            <input type="password" class="form-control" id="serverPassword" name="password" placeholder="Password" value="@data.GetValue("password")">
+        </div>
+
+        <div>
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a class="btn btn-primary" asp-area="" asp-controller="Manage" asp-action="Servers">Cancel</a>
+            <button type="button" class="btn btn-success" onclick="testConnection()">Test Connection</button>
+        </div>
+        
+
+    </form>
+</div>
+<br />
+<div class="row">
+    <div class="col-12">
+        <div id="msgBox">
+
+        </div>
+    </div>
+</div>
+<script>
+
+    function testConnection() {
+
+        var seconds = 0;
+        var url = $("#serverURL").val();
+        var username = $("#serverUsername").val();
+        var password = $("#serverPassword").val();
+
+        var timer = setInterval(function () {
+            seconds++;
+
+            $("#msgBox").html('<i class="fa fa-spinner fa-pulse"></i></span> Testing Connection: ' + convertToMinutes(seconds));
+        }, 1000);
+
+
+
+        $.ajax(
+            {
+                url: '@Url.Action("TestConnection", "Manage")',
+                type: "GET",
+                data: { url: url, username: username, password: password },
+                success: function (data, textStatus, jqXHR) {
+                    clearInterval(timer);
+                    if (data.success) {
+                        $("#msgBox").html('<strong  style="color:green">' +  data.msg + '</strong>');
+                    }
+                    else
+                        $("#msgBox").html('<strong  style="color:red">' +  data.msg + '</strong>');
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+
+                }
+            });
+    }
+
+    function convertToMinutes(raw)
+    {
+        var time = parseInt(raw,10);
+        time = time < 0 ? 0 : time;
+
+        var minutes = Math.floor(time / 60);
+        var seconds = time % 60;
+
+        minutes = minutes < 10 ? "0"+minutes : minutes;
+        seconds = seconds < 10 ? "0"+seconds : seconds;
+
+        return minutes+":"+seconds;
+    }
+</script>

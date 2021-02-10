@@ -1,0 +1,144 @@
+﻿@using Newtonsoft.Json.Linq
+
+@{
+    ViewData["Title"] = "OrgUnits";
+
+
+    JArray servers = (JArray)ViewBag.servers;
+
+}
+
+<h1>Organisation Unit Mapping</h1>
+
+<div class="row orgUnitSDBox">
+    <div class="col-6">
+        <label for="source" style="font-weight:bold;">Source</label>
+        <select class="form-control" id="source" name="source">
+            <!option value="-1">Please Select</!option>
+
+            @foreach (var s in servers)
+            {
+                JObject server = (JObject)s;
+
+                <!option value="@server.GetValue("ID").ToString()">
+                @server.GetValue("name").ToString()</!option>
+            }
+
+        </select>
+    </div>
+    <div class="col-6">
+        <label for="destination" style="font-weight:bold;" >Destination</label>
+        <select class="form-control" id="destination" name="destination">
+            <!option value="-1">Please Select</!option>
+
+            @foreach (var s in servers)
+            {
+                JObject server = (JObject)s;
+
+                <!option value="@server.GetValue("ID").ToString()">
+                    @server.GetValue("name").ToString()
+                </!option>
+            }
+
+        </select>
+    </div>
+</div>
+<br />
+<div class="row">
+    <div class="col-12">
+        <button type="button" class="btn btn-primary" onclick="loadOrgUnitMapping()">Load</button>
+        <button type="button" class="btn btn-secondary" onclick="cancel()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="exportMapping()">Export</button>
+    </div>
+</div>
+<br />
+<div id="ouMappingBox">
+
+</div>
+<script type="text/javascript">
+
+    function loadOrgUnitMapping() {
+        var source = $("#source").val();
+        var dest = $("#destination").val();
+
+        if (source == -1 || dest == -1) {
+            $("#ouMappingBox").html(displayMessage("Please select both a source and destination","error"));
+        }
+        else if(source == dest){
+             $("#ouMappingBox").html(displayMessage("Source and destination cannot be the same","error"));
+        }
+        else {
+
+            $("#ouMappingBox").html(displayMessage("Loading...", "loading"));
+
+            $.ajax(
+            {
+                url: '@Url.Action("LoadOrgUnitMapping", "Manage")',
+                type: "POST",
+                data: { source: source,destination:dest },
+                success: function (data, textStatus, jqXHR) {
+
+                    $("#ouMappingBox").html(data);
+
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+
+                }
+            });
+        }
+        
+    }
+
+    function cancel() {
+        window.location.href = "@Url.Action("Index","Manage")";
+    }
+
+    function displayMessage(msg, type) {
+        var html = "";
+        var c = "";
+        var i = "";
+
+        if (type == "error") {
+            c = "orgUnitErrorMsg"; 
+            i = "exclamation-circle";
+        }
+
+        if (type == "success") {
+            c = "orgUnitSuccessMsg"; 
+            i = "check-circle";
+        }
+
+        if (type == "loading") {
+            c = "orgUnitLoadingMsg"; 
+            i = "spinner fa-pulse";
+        }
+
+        html += "<div class=\"" + c + "\">";
+        html += '<i class="fa fa-' + i + '"></i></span>  '
+        html += msg;
+        html += "</div>";
+
+        return html;
+    }
+
+    function exportMapping() {
+
+        var source = $("#source").val();
+        var dest = $("#destination").val();
+
+        if (source == -1 || dest == -1) {
+            $("#ouMappingBox").html(displayMessage("Please select both a source and destination", "error"));
+        }
+        else if (source == dest) {
+            $("#ouMappingBox").html(displayMessage("Source and destination cannot be the same", "error"));
+        }
+        else {
+            var source = $("#source").val();
+            var dest = $("#destination").val();
+            var baseUrl = "@Url.Action("exportMapping","Manage")";
+            var exportURL = baseUrl + "?s=" + source + "&d=" + dest;
+
+            window.location.href = exportURL;
+        }
+    }
+</script>

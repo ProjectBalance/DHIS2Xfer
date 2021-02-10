@@ -1,0 +1,73 @@
+﻿@using Newtonsoft.Json.Linq;
+
+
+@{
+    ViewData["Title"] = "Data";
+
+    JArray servers = (JArray)ViewBag.servers;
+   
+}
+
+<h1>Data</h1>
+
+<br />
+
+<div>
+    <label for="source" style="font-weight:bold;">Server</label>
+    <select class="form-control" id="server" name="server">
+        <!option value="-1">Please Select</!option>
+
+        @foreach (var s in servers)
+        {
+
+            JObject server = (JObject)s;
+
+            <!option value="@server.GetValue("ID").ToString()">
+                @server.GetValue("name").ToString()
+            </!option>
+        }
+
+    </select>
+</div>
+<div>
+    <label for="serverType">Type</label>
+    <select class="form-control" id="type" name="type">
+        <!option value="dataElements">Data Element</!option>
+        <!option value="indicators">Indicator</!option>
+        <!option value="programIndicators">Program Indicator</!option>
+    </select>
+</div>
+<br />
+<div>
+    <button class="btn btn-success" type="button" onclick="loadServerData()">Load</button>
+</div>
+<div id="dataBox">
+
+</div>
+
+<script type="text/javascript">
+
+    function loadServerData() {
+        var serverID = $("#server").val();
+        var type = $("#type").val();
+
+        if (serverID != "-1")
+        {
+
+            $.ajax({
+                url: '@Url.Action("LoadMeta", "Data")',
+                type: "POST",
+                data: { id: serverID, type: type },
+                success: function (data, textStatus, jqXHR) {
+
+                    $("#dataBox").html(data);
+
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+
+                }
+            });
+        }
+    }
+
+</script>

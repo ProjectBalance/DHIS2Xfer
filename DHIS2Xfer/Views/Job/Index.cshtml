@@ -1,0 +1,121 @@
+﻿@using Newtonsoft.Json.Linq;
+
+
+@{
+    ViewData["Title"] = "Jobs";
+}
+
+<h1>Jobs</h1>
+
+<br />
+<div class="row">
+    <div class="col-12">
+        <a class="btn btn-primary" href="@Url.Action("Add","Job")">Add</a>
+    </div>
+</div>
+<br />
+<br />
+<div class="row">
+    <div class="col-12">
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Source / Destination</th>
+                    <th scope="col">Org Unit Level</th>
+                    <th scope="col">Period Type</th>
+                    <th scope="col"># Jobs</th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody>
+
+                @{
+                    JArray jobs = (JArray)ViewBag.data;
+                    foreach (JObject j in jobs)
+                    {
+                        JObject meta = (JObject)j.GetValue("meta");
+                        int jobCount = ((JArray)j.GetValue("jobs")).Count();
+                        string periodType = "";
+
+                        switch (meta.GetValue("periodType").ToString())
+                        {
+                            case "1":
+                                periodType = "Daily";
+                                break;
+                            case "2":
+                                periodType = "Monthly";
+                                break;
+                            case "3":
+                                periodType = "Yearly";
+                                break;
+                            default:
+                                break;
+                        }
+
+                        <tr>
+                            <td>@meta.GetValue("name")</td>
+                            <td>@meta.GetValue("sourceName") / @meta.GetValue("destinationName")</td>
+                            <td>@meta.GetValue("level") - @meta.GetValue("levelName")</td>
+                            <td>@periodType</td>
+                            <td>@jobCount</td>
+                            <td>
+                                <a href="@Url.Action("Edit","Job", new { id = meta.GetValue("id").ToString()})" class="btn btn-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+
+                                <button class="btn btn-danger" type="button" onclick="confirmRemove('@meta.GetValue("id").ToString()')" title="Remove" data-toggle="modal" data-target="#confirmModal">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+
+                    }
+                }
+
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal" id="confirmModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <h4 class="modal-title">Confirm Job Removal</h4>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+
+            <!-- Modal body -->
+            <div class="modal-body">
+                Please confirm that you want to remove this job.
+            </div>
+
+            <!-- Modal footer -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" data-dismiss="modal" onclick="removeJob()">Confirm</button>
+
+                <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var selectedJob;
+
+    function confirmRemove(id) {
+        selectedJob = id;
+    }
+
+
+    function removeJob() {
+        var url = '@Url.Action("Remove","Job")';
+        window.location = url + "/" + selectedJob;
+
+    }
+</script>

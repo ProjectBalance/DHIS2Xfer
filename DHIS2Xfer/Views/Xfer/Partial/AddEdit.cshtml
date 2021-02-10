@@ -1,0 +1,266 @@
+﻿@using Newtonsoft.Json.Linq
+
+@{
+    JArray jobs = ViewBag.jobs;
+    JObject xfer = ViewBag.xfer;
+
+    string name = "";
+    string id = "";
+    string periodStart = "";
+    string periodEnd = "";
+    JArray metaJobs = new JArray();
+
+    if(xfer != null)
+    {
+        name = xfer.Value<string>("name");
+        id = xfer.Value<string>("id");
+        periodStart = xfer.Value<string>("periodStart");
+        periodEnd = xfer.Value<string>("periodEnd");
+        metaJobs = xfer.Value<JArray>("jobs");
+    }
+
+}
+
+<div class="row jobsSDBox">
+    <div class="col-sm-12 col-md-6">
+
+        <label for="XferName" style="font-weight:bold;">Name</label>
+        <input class="form-control" type="text" id="XferName" name="name" value="@name" />
+        <input type="hidden" id="XferID" name="id" value="@id" />
+
+
+    </div>
+</div>
+<div class="row jobsSDBox">
+    <div class="col-sm-12 col-md-6">
+
+        <label for="periodStart" style="font-weight:bold;">Period Start</label>
+        <div class="input-group date" style="margin-bottom:5px;">
+            <input type="text" class="form-control" id="periodStart" name="periodStart" value="@periodStart">
+            <div class="input-group-append">
+                <button class="btn btn-secondary" type="button">
+                    <i class="fa fa-calendar"></i>
+                </button>
+            </div>
+        </div>
+
+
+    </div>
+    <div class="col-sm-12 col-md-6">
+
+        <label for="periodEnd" style="font-weight:bold;">Period End</label>
+        <div class="input-group date" style="margin-bottom:5px;">
+            <input type="text" class="form-control" id="periodEnd" name="periodEnd" value="@periodEnd">
+            <div class="input-group-append">
+                <button class="btn btn-secondary" type="button">
+                    <i class="fa fa-calendar"></i>
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="row orgUnitBody">
+    <div class="col-12" style="max-height:500px; overflow-y:auto;">
+
+        <table class="table clickable" style="background-color:#FFF;">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Source / Destination</th>
+                    <th scope="col">Org Unit Level</th>
+                    <th scope="col">Period Type</th>
+                    <th scope="col"># Jobs</th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody>
+
+                @{
+                    foreach (JObject j in jobs)
+                    {
+                        JObject meta = (JObject)j.GetValue("meta");
+                        int jobCount = ((JArray)j.GetValue("jobs")).Count();
+                        string periodType = "";
+                        string bgColor = "white";
+                        string jobChecked = "";
+
+                        switch (meta.GetValue("periodType").ToString())
+                        {
+                            case "1":
+                                periodType = "Daily";
+                                break;
+                            case "2":
+                                periodType = "Monthly";
+                                break;
+                            case "3":
+                                periodType = "Yearly";
+                                break;
+                            default:
+                                break;
+                        }
+
+                        foreach (var mj in metaJobs)
+                        {
+                            if(meta.Value<string>("id") == mj.ToString())
+                            {
+                                bgColor = "#2AFF7F";
+                                jobChecked = "<i class=\"fa fa-check\"></i></span>";
+                            }
+                        }
+
+                        <tr id="jr-@meta.GetValue("id")" onclick="selectJob('@meta.GetValue("id")')" style="background-color:@bgColor">
+                            <td>@meta.GetValue("name")</td>
+                            <td>@meta.GetValue("sourceName") / @meta.GetValue("destinationName")</td>
+                            <td>@meta.GetValue("level") - @meta.GetValue("levelName")</td>
+                            <td>@periodType</td>
+                            <td>@jobCount</td>
+                            <td id="jCheck-@meta.GetValue("id")">
+                                @Html.Raw(jobChecked)
+                            </td>
+                        </tr>
+
+                    }
+                }
+
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="row jobsSDBox">
+    <div class="col-sm-12 col-md-6">
+        <button type="button" class="btn btn-success" onclick="saveXfer()">Save</button>
+        <button type="button" class="btn btn-secondary" onclick="cancel()">Cancel</button>
+    </div>
+</div>
+
+<br />
+
+<div class="row">
+    <div id="MsgBox" class="col-12">
+
+    </div>
+</div>
+
+<script type="text/javascript">
+    @{ 
+        string jobData = "[]";
+        if(xfer != null)
+        {
+            jobData = metaJobs.ToString();
+        }
+    }
+
+    var data = @Html.Raw(jobData);
+
+    $(function () {
+        $('.input-group.date').datepicker({
+            todayBtn: "linked",
+            todayHighlight: true
+        });
+    });
+
+    function cancel() {
+        window.location.href = "@Url.Action("Index","Xfer")";
+    }
+
+    function selectJob(id) {
+        var row = $("#jr-" + id);
+        var check = $("#jCheck-" + id);
+        if (row.css("background-color") == "rgb(255, 255, 255)") {
+            row.css("background-color", "#2AFF7F");
+            check.html('<i class="fa fa-check"></i></span>');
+            data.push(id);
+        }
+        else {
+            row.css("background-color", "#FFFFFF");
+            check.html("");
+            data.splice($.inArray(id, data), 1);
+        }
+            
+
+
+    }
+
+    function saveXfer() {
+        var valid = true;
+
+        var id = $("#XferID").val();
+        var name = $("#XferName").val();
+        var periodStart = $("#periodStart").val();
+        var periodEnd = $("#periodEnd").val();
+        var jobs = JSON.stringify(data);
+
+        $("#MsgBox").html("");
+
+        if (name == "" || name == null) {
+            $("#MsgBox").append(displayMessage("Please provide a name", "error"));
+            valid = false;
+        }
+
+        if (periodStart == "" || periodStart == null) {
+            $("#MsgBox").append(displayMessage("Please provide a Start Period", "error"));
+            valid = false;
+        }
+
+        if (periodEnd == "" || periodEnd == null) {
+            $("#MsgBox").append(displayMessage("Please provide an End Period", "error"));
+            valid = false;
+        }
+
+        if (data.length == 0) {
+             $("#MsgBox").append(displayMessage("Please select a job", "error"));
+            valid = false;
+        }
+
+        if (valid) {
+            $("#MsgBox").append(displayMessage("Saving...", "loading"));
+
+            $.ajax(
+            {
+                url: '@Url.Action("SaveXfer", "Xfer")',
+                type: "POST",
+                data: {id:id,name:name, periodStart:periodStart, periodEnd:periodEnd, jobs:jobs },
+                success: function (data, textStatus, jqXHR) {
+
+                    cancel();
+
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+
+                }
+            });
+        }
+        
+    }
+
+    function displayMessage(msg, type) {
+        var html = "";
+        var c = "";
+        var i = "";
+
+        if (type == "error") {
+            c = "orgUnitErrorMsg";
+            i = "exclamation-circle";
+        }
+
+        if (type == "success") {
+            c = "orgUnitSuccessMsg";
+            i = "check-circle";
+        }
+
+        if (type == "loading") {
+            c = "orgUnitLoadingMsg";
+            i = "spinner fa-pulse";
+        }
+
+        html += "<div class=\"" + c + "\">";
+        html += '<i class="fa fa-' + i + '"></i></span>  '
+        html += msg;
+        html += "</div>";
+
+        return html;
+    }
+</script>

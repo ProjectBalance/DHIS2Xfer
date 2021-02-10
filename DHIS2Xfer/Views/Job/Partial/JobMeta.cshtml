@@ -1,0 +1,458 @@
+﻿@using Newtonsoft.Json.Linq
+@using DHIS2Xfer.Models.Job
+
+@{
+
+    JObject ouLevels = ViewBag.ouLevels;
+    JArray orgUnitLevels = (JArray)ouLevels.GetValue("orgUnitLevels");
+
+    JArray jobMapped = (JArray)((JObject)ViewBag.jobs).GetValue("mapped");
+    JArray jobUnMapped = (JArray)((JObject)ViewBag.jobs).GetValue("unMapped");
+
+    JObject meta = ViewBag.meta;
+
+    string level = "";
+    string period = "";
+    string selected = "";
+
+    if(meta != null)
+    {
+        level = meta.GetValue("level").ToString();
+        period = meta.GetValue("periodType").ToString();
+    }
+
+}
+    <div class="row jobsSDBox">
+        <div class="col-sm-12 col-md-6">
+
+            <label for="orgUnitLevel" style="font-weight:bold;">Source Organisation Unit Levels</label>
+            <select class="form-control" id="orgUnitLevel" name="orgUnitLevel">
+                <!option value="-1">Please Select</!option>
+
+                @foreach (JObject ou in orgUnitLevels)
+                {
+                    selected = "";
+                    if(ou.GetValue("level").ToString() == level)
+                    {
+                        selected = "selected";
+                    }
+                    
+                    <!option value="@ou.GetValue("level").ToString()" @selected >
+                        @ou.GetValue("level").ToString() - @ou.GetValue("displayName").ToString()
+                    </!option>
+                }
+
+            </select>
+
+
+        </div>
+        <div class="col-sm-12 col-md-6">
+
+            <label for="periodType" style="font-weight:bold;">Period Type</label>
+            <select class="form-control" id="periodType" name="periodType">
+                <!option value="-1">Please Select</!option>
+                @if (period == "1") { selected = "selected"; } else { selected = ""; }
+                <!option value="1" @selected >Daily</!option>
+                @if (period == "2") { selected = "selected"; } else { selected = ""; }
+                <!option value="2" @selected >Monthly</!option>
+                @if (period == "3") { selected = "selected"; } else { selected = ""; }
+                <!option value="3" @selected >Yearly</!option>
+            </select>
+
+
+        </div>
+    </div>
+
+<div class="row jobsBody">
+    <div class="col-6">
+        @{
+            UnMapped srcUnMapped = new UnMapped();
+            srcUnMapped.ID = "sourceSearch";
+            srcUnMapped.SelectID = "umSource";
+            srcUnMapped.Type = "Source";
+            srcUnMapped.Data = jobUnMapped;
+
+        }
+
+        <partial name="~/Views/Job/Partial/UnMapped.cshtml" model="srcUnMapped" />
+
+
+
+    </div>
+    <div class="col-6">
+        @{
+            UnMapped destUnMapped = new UnMapped();
+            destUnMapped.ID = "destSearch";
+            destUnMapped.SelectID = "umDest";
+            destUnMapped.Type = "Destination";
+            destUnMapped.Data = jobUnMapped;
+
+        }
+
+        <partial name="~/Views/Job/Partial/UnMapped.cshtml" model="destUnMapped" />
+
+
+    </div>
+</div>
+<div class="row jobsBody">
+    <div class="col-12">
+        <button id="btnMap" type="button" class="btn btn-success" onclick="map()">Map</button>
+    </div>
+</div>
+
+
+<div class="row jobsHeader">
+    <div class="col-12">
+        <h3>Mapped</h3>
+    </div>
+</div>
+<div class="row jobsBody">
+    <div id="tableBox" class="col-12" style="max-height:500px; overflow-y:auto; font-size:12px;">
+        <table class="table" style="background-color:#FFF;">
+            <thead>
+                <tr>
+                    <th scope="col">Source</th>
+                    <th scope="col">COC</th>
+                    <th scope="col">Destination</th>
+                    <th scope="col">COC</th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody id="mappedTable">
+
+                @{
+
+                    foreach (JObject o in jobMapped)
+                    {
+                        
+                        string srcCOCName = "";
+                        string destCOCName = "";
+                        if (o.GetValue("srcCOCName") != null) { srcCOCName = o.GetValue("srcCOCName").ToString(); }
+                        else { srcCOCName = o.GetValue("srcCOC").ToString(); }
+
+                        if (o.GetValue("destCOCName") != null) { destCOCName = o.GetValue("destCOCName").ToString(); }
+                        else { destCOCName = o.GetValue("destCOC").ToString(); }
+
+                       
+
+                        <tr id="mr-@o.GetValue("sourceID")-@o.GetValue("destID")">
+                            <td title="@o.GetValue("srcName").ToString()">@o.GetValue("srcName").ToString()</td>
+                            <td title="@srcCOCName">@srcCOCName</td>
+                            <td title="@o.GetValue("destName").ToString()">@o.GetValue("destName").ToString()</td>
+                            <td title="@destCOCName">@destCOCName</td>
+                            <td>
+                                <button type="button" class="btn btn-success" onclick="unmap('@o.GetValue("sourceID")','@o.GetValue("destID")')">Unmap</button>
+                            </td>
+                        </tr>
+
+                    }
+                }
+
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<br />
+
+<div class="row">
+    <div id="unmapMsgBox" class="col-12">
+
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <button type="button" class="btn btn-primary" onclick="save()">Save</button>
+        <button type="button" class="btn btn-secondary" onclick="cancel()">Cancel</button>
+    </div>
+</div>
+
+<script type="text/javascript">
+    //Holds mapped and unmapped data
+    var data = @Html.Raw(ViewBag.jobs)
+
+        
+    function map() {
+        $("#unmapMsgBox").html("");
+
+        var source = $("#umSource").val();
+        var dest = $("#umDest").val();
+        var sourceCOC = $("#umSourceOption option:selected").val();
+        var destCOC = $("#umDestOption option:selected").val();
+        var sourceCOCName = $("#umSourceOption option:selected").text();
+        var destCOCName = $("#umDestOption option:selected").text();
+
+        if (source == null || dest == null ){
+            $("#unmapMsgBox").html(displayMessage("Please select both a source and destination to map", "error"));
+        }
+        else if (sourceCOC == "-1" || destCOC == "-1") {
+            $("#unmapMsgBox").html(displayMessage("Please select an option for both source and destination", "error"));
+        }
+        else {
+            var sObj = getUnmapped(source);
+            var dObj = getUnmapped(dest);
+
+            var map = new Object();
+            map.sourceID = sObj.id;
+            map.destID = dObj.id;
+            map.srcName = sObj.displayName;
+            map.destName = dObj.displayName;
+            map.srcCOC = sourceCOC;
+            map.destCOC = destCOC;
+            map.srcCOCName = sourceCOCName;
+            map.destCOCName = destCOCName;
+
+            if (checkDuplicate(map)) {
+                $("#unmapMsgBox").html(displayMessage("Mapping already exists", "error"));
+            }
+            else {
+                //Add the mapped item to mapped
+                data.mapped.push(map);
+
+                //Add the mapped row to the table, scroll to the bottom
+                $("#mappedTable").append(newRow(map));
+                $("#tableBox").animate({ scrollTop: $('#tableBox').prop("scrollHeight") }, 1000);
+            }
+            
+        }
+
+
+    }
+
+    function unmap(sourceID, destID) {
+        $("#unmapMsgBox").html("");
+
+        var index = -1;
+        var m;
+
+        //Find item to unmap
+        $.each(data.mapped, function (k, v) {
+
+            if (v.sourceID == sourceID && v.destID == destID) {
+                index = k;
+                m = v;
+            }
+
+        });
+
+
+        var sObject = new Object();
+        var dObject = new Object();
+
+        sObject.id = m.sourceID;
+        sObject.displayName = m.srcName;
+        sObject.type = "Source";
+
+        dObject.id = m.destID;
+        dObject.displayName = m.destName;
+        dObject.type = "Destination";
+
+        //Add unmapped item to unmapped
+        //data.unMapped.push(sObject);
+        //data.unMapped.push(dObject);
+
+        //Remove from mapped
+        data.mapped.splice(index, 1);
+
+        //Remove the row from the mapped table
+        $("#mr-" + sourceID + "-" + destID).remove();
+
+        var sOpt = new Option(m.srcName, m.sourceID, false, false);
+        $('#umSource').append(sOpt);
+
+        var dOpt = new Option(m.destName, m.destID, false, false);
+        $('#umDest').append(dOpt);
+
+    }
+
+    function getUnmapped(id) {
+        var unmapped = data.unMapped;
+        var unmap;
+
+        $.each(unmapped,function (k,v) {
+            if (v.id == id) {
+                unmap = v;
+            }
+        });
+
+        return unmap;
+    }
+
+    function getMapped(id) {
+        var mapped = data.mapped;
+        var map;
+
+        $.each(mapped,function (k,v) {
+            if (v.sourceID == id) {
+                map = v;
+            }
+        });
+
+        return map;
+    }
+
+    function newRow(d) {
+        var html = "";
+
+        html += '<tr id="mr-' + d.sourceID + '-' + d.destID + '">';
+        html += '<td title="' + d.srcName + '">' + d.srcName + '</td>';
+        html += '<td title="' + d.srcCOCName + '">' + d.srcCOCName + '</td>';
+        html += '<td title="' + d.destName + '">' + d.destName + '</td>';
+        html += '<td title="' + d.destCOCName + '">' + d.destCOCName + '</td>';
+        html += '<td><button type="button" class="btn btn-success" onclick="unmap(\'' + d.sourceID + '\',\'' + d.destID + '\')">Unmap</button></td>';
+        html += '</tr>';
+
+        return html;
+    }
+
+    function removeUnmapped(d) {
+        $("#umSource option[value='" + d.sourceID + "']").remove();
+        $("#umDest option[value='" + d.destID + "']").remove();
+
+        removeFromUnmapped(d.sourceID,"Source");
+        removeFromUnmapped(d.destID, "Destination");
+    }
+
+    function removeFromUnmapped(id,type) {
+        var index
+
+        $.each(data.unmapped, function (k, v) {
+            if (v.id == id && v.type == type) {
+                index = k;
+            }
+        });
+
+        data.unMapped.splice(index,1);
+
+    }
+
+    function save() {
+        var jobID = $("#jobID").val();
+        var jobName = $("#jobName").val();
+        var orgUnitLevel = $("#orgUnitLevel").val();
+        var periodType = $("#periodType").val();
+        var source = $("#source").val();
+        var dest = $("#destination").val();
+        var sourceType = $("#sourceType").val();
+        var destType = $("#destinationType").val();
+        var d = JSON.stringify(data);
+
+        var valid = true;
+
+        if (jobName == "") {
+            $("#unmapMsgBox").html(displayMessage("Job name cannot be blank", "error"));
+            valid = false;
+        }
+
+        if (orgUnitLevel == "-1") {
+            $("#unmapMsgBox").html(displayMessage("Please select an Organisation Unit Level", "error"));
+            valid = false;
+        }
+
+        if (periodType == "-1") {
+            $("#unmapMsgBox").html(displayMessage("Please select a Period Type", "error"));
+            valid = false;
+        }
+
+        if (valid) {
+            $.ajax(
+            {
+                url: '@Url.Action("SaveJob", "Job")',
+                type: "POST",
+                data: { id:jobID,name:jobName, orgUnitLevel: orgUnitLevel, periodType: periodType, source:source,destination:dest,sourceType:sourceType,destinationType:destType,data: d },
+                success: function (data, textStatus, jqXHR) {
+
+                    if (data.success)
+                        cancel();
+                    else
+                        $("#jobBox").html(displayMessage("Unable to save Job","error"));
+
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+
+                }
+            });
+        }
+
+    }
+
+    function search(id) {
+        // Declare variables
+        var input, filter, ul, li, a, i, txtValue;
+        var searchList;
+        if (id == "sourceSearch") {
+
+            searchList = "umSource";
+        }
+        else {
+            searchList = "umDest";
+        }
+
+        var value = $("#" + id).val().toLowerCase();
+
+        $("#" + searchList + " *").filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+        });
+
+    }
+
+    function loadOptionData(id,type) {
+        var deID = $("#" + id).val();
+        var sID = $("#" + type.toLowerCase()).val();
+        var sType = $("#" + type.toLowerCase() + "Type").val();
+
+        $("#" + id + "Label").html('<i class="fa fa-spinner fa-pulse"></i></span>  Loading...');
+        $("#" + id + "Option").prop("disabled",true);
+
+        $.ajax(
+            {
+                url: '@Url.Action("LoadCOC", "Job")',
+                type: "GET",
+                dataType: 'json',
+                data: {id:deID, sID:sID,sType:sType },
+                success: function (data, textStatus, jqXHR) {
+
+                    $("#" + id + "Label").html("Options");
+                    $("#" + id + "Option").prop("disabled",false);
+                    updateOptionBox(id, JSON.parse(data));
+
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+
+                }
+            });
+
+    }
+
+    function updateOptionBox(id, data) {
+        var html = "";
+
+        html += '<option value="-1">Please Select</option>'
+
+        $.each(data, function (k, v) {
+            var selected = "";
+
+            if (v.displayName == "default" || data.length == 1)
+                selected = "selected";
+
+            html += '<option value="' + v.id + '" ' + selected + '>' + v.displayName + '</option>'
+        });
+
+        $("#" + id + "Option").html(html);
+    }
+
+    function checkDuplicate(map) {
+        var mapped = data.mapped;
+        var hasDuplicate = false;
+
+        $.each(mapped, function (k, v) {
+            if (v.sourceID == map.sourceID && v.destID == map.destID && v.srcCOC == map.srcCOC && v.destCOC == map.destCOC) {
+                hasDuplicate = true;
+            }
+        });
+
+        return hasDuplicate;
+    }
+</script>

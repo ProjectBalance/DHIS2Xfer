@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29709.97
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DHIS2Xfer", "DHIS2Xfer\DHIS2Xfer.csproj", "{004A7356-6E88-49F5-AE15-4FC3DE60C348}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XferCore", "XferCore\XferCore.csproj", "{5E2A79E1-E076-4A00-A4E1-2F94BE7D3F53}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{004A7356-6E88-49F5-AE15-4FC3DE60C348}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{004A7356-6E88-49F5-AE15-4FC3DE60C348}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{004A7356-6E88-49F5-AE15-4FC3DE60C348}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{004A7356-6E88-49F5-AE15-4FC3DE60C348}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5E2A79E1-E076-4A00-A4E1-2F94BE7D3F53}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E2A79E1-E076-4A00-A4E1-2F94BE7D3F53}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E2A79E1-E076-4A00-A4E1-2F94BE7D3F53}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E2A79E1-E076-4A00-A4E1-2F94BE7D3F53}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B2AF6CCC-A5E6-4102-906E-B681E68BD14A}
+	EndGlobalSection
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 3
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = https://projectbalance.visualstudio.com/
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = DHIS2Xfer\\DHIS2Xfer.csproj
+		SccProjectName1 = DHIS2Xfer
+		SccLocalPath1 = DHIS2Xfer
+		SccProjectUniqueName2 = XferCore\\XferCore.csproj
+		SccProjectName2 = XferCore
+		SccLocalPath2 = XferCore
+	EndGlobalSection
+EndGlobal

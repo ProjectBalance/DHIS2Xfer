@@ -1,0 +1,119 @@
+﻿@using Newtonsoft.Json.Linq;
+
+
+@{
+    ViewData["Title"] = "Dashboard";
+    JobStats js = ViewBag.jobStats;
+}
+
+<br />
+
+<div class="card-deck mb-3 text-center">
+    <div class="card">
+        <div class="card-header">
+            <h4>Servers</h4>
+        </div>
+        <div class="card-body">
+            <h1>@ViewBag.serverCount</h1>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h4>Org Unit Pairs</h4>
+        </div>
+        <div class="card-body">
+            @{ 
+                int oupCount = ViewBag.oumCount / 2;
+            }
+            <h1>@oupCount</h1>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h4>Job Files</h4>
+        </div>
+        <div class="card-body">
+            <h1>@ViewBag.jobCount</h1>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            
+            <h4>Xfer Files</h4>
+        </div>
+        <div class="card-body">
+            <h1>@ViewBag.xferCount</h1>
+        </div>
+    </div>
+
+</div>
+
+<br />
+<h2>Summary</h2>
+<hr />
+<div class="row">
+    <div class="col-lg-6">
+        <h4>Servers</h4>
+    </div>
+    <div class="col-lg-6">
+        <h4>Mapped Org Units</h4>
+    </div>
+</div>
+<div class="row" style="max-height:500px; overflow-y:auto;">
+    <div class="col-lg-6">
+        @{
+            JArray serverList = (JArray)ViewBag.servers;
+            foreach (var s in serverList)
+            {
+                JObject o = (JObject)s;
+
+                <div>
+                    @o.GetValue("name")
+                </div>
+            }
+        }
+    </div>
+    <div class="col-lg-6">
+        @{
+            JArray oumList = (JArray)ViewBag.oumList;
+            foreach (var ou in oumList)
+            {
+                JObject o = (JObject)ou;
+
+                <div>
+                    @o.GetValue("sourceName") - @o.GetValue("destName")
+                </div>
+            }
+        }
+    </div>
+</div>
+<hr />
+<div class="row">
+    <div class="col-12">
+        <h4>Jobs</h4>
+    </div>
+</div>
+<div class="row">
+    @foreach (JobStats.StatType type in (JobStats.StatType[])Enum.GetValues(typeof(JobStats.StatType)))
+    {
+        <div class="col-4">
+            <div>
+                <strong>@type.ToString()</strong>
+            </div>
+            @foreach (Stats stats in js.Stats)
+            {
+                if (stats.Type == type)
+                {
+                    <div>
+                        @stats.Name : @stats.Value
+                    </div>
+                }
+
+            }
+        </div>
+    }
+
+</div>

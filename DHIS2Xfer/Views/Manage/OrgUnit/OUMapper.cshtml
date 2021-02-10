@@ -1,0 +1,291 @@
+﻿@using Newtonsoft.Json.Linq
+
+@{ 
+    JArray ouMap = (JArray)((JObject)ViewBag.ouMapped).GetValue("mapped");
+    JArray ouUnmapped = (JArray)((JObject)ViewBag.ouMapped).GetValue("unmapped");
+}
+
+    <div class="row orgUnitHeader">
+        <div class="col-12">
+            <h3>Mapped</h3>
+        </div>
+    </div>
+    <div class="row orgUnitBody">
+        <div id="tableBox" class="col-12" style="max-height:500px; overflow-y:auto;">
+            <table class="table" style="background-color:#FFF;">
+                <thead>
+                    <tr>
+                        <th scope="col">Source</th>
+                        <th scope="col">Destination</th>
+                        <th scope="col"></th>
+                    </tr>
+                </thead>
+                <tbody id="mappedTable">
+
+                    @{
+
+                        foreach (var m in ouMap)
+                        {
+                            JObject o = (JObject)m;
+
+                            <tr id="mr-@o.GetValue("sourceID")-@o.GetValue("destID")">
+                                <td>@o.GetValue("srcName").ToString()</td>
+                                <td>@o.GetValue("destName").ToString()</td>
+                                <td>
+                                    <button type="button" class="btn btn-success" onclick="unmap('@o.GetValue("sourceID")','@o.GetValue("destID")')">Unmap</button>
+                                </td>
+                            </tr>
+
+                        }
+                    }
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+   
+
+    <div class="row orgUnitHeader">
+        <div class="col-12">
+            <h3>Unmapped</h3>
+        </div>
+    </div>
+    <div class="row orgUnitBody">
+        <div class="col-6">
+            <strong>Source</strong>
+        </div>
+        <div class="col-6">
+            <strong>Destination</strong>
+        </div>
+    </div>
+    <div class="row orgUnitBody">
+        <div class="col-6">
+            <select class="form-control" size="10" id="umSource">
+                @foreach (JObject s in ouUnmapped)
+                {
+                    if (s.GetValue("type").ToString() == "Source")
+                    {
+                        <!option value="@s.GetValue("id")">@s.GetValue("displayName")</!option>
+                    }
+
+                }
+            </select>
+        </div>
+        <div class="col-6">
+            <select class="form-control" size="10" id="umDest">
+                @foreach (JObject d in ouUnmapped)
+                {
+                    if (d.GetValue("type").ToString() == "Destination")
+                    {
+                        <!option value="@d.GetValue("id")">@d.GetValue("displayName")</!option>
+                    }
+                }
+            </select>
+        </div>
+    </div>
+    <div class="row orgUnitBody">
+        <div class="col-12">
+            <button type="button" class="btn btn-success" onclick="map()">Map</button>
+        </div>
+    </div>
+    <div class="row">
+        <div id="unmapMsgBox" class="col-12">
+
+        </div>
+    </div>
+    <br />
+    <div class="row">
+        <div class="col-12">
+            <button type="button" class="btn btn-primary" onclick="save()">Save</button>
+            <button type="button" class="btn btn-secondary" onclick="cancel()">Cancel</button>
+        </div>
+    </div>
+
+<script type="text/javascript">
+    //Holds mapped and unmapped data
+    var data = @Html.Raw(ViewBag.ouMapped)
+
+    function exportUnmapped() {
+        var d = JSON.stringify(data);
+
+        $.ajax(
+            {
+                url: '@Url.Action("SaveOUMapping", "Manage")',
+                type: "POST",
+                data: { source:source,destination:dest,data: d },
+                success: function (data, textStatus, jqXHR) {
+
+                    if(data.success)
+                        $("#ouMappingBox").html(displayMessage("Successfully saved Organisation Mapping", "success"));
+                    else
+                        $("#unmapMsgBox").html(displayMessage("Unable to save Organisation Mapping","error"));
+
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    
+                }
+            });
+    }
+
+    function map() {
+        $("#unmapMsgBox").html("");
+
+        var source = $("#umSource").val();
+        var dest = $("#umDest").val();
+
+        if (source == null || dest == null ){
+            $("#unmapMsgBox").html(displayMessage("Please select both a source and destination to map", "error"));
+        }
+        else {
+            var sObj = getUnmapped(source);
+            var dObj = getUnmapped(dest);
+
+            var map = new Object();
+            map.sourceID = sObj.id;
+            map.destID = dObj.id;
+            map.srcName = sObj.displayName;
+            map.destName = dObj.displayName;
+
+            //Add the mapped item to mapped, remove from unmapped
+            data.mapped.push(map);
+            removeUnmapped(map);
+
+            //Add the mapped row to the table, scroll to the bottom
+            $("#mappedTable").append(newRow(map));
+            $("#tableBox").animate({ scrollTop: $('#tableBox').prop("scrollHeight") }, 1000);
+        }
+        
+
+    }
+
+    function unmap(sourceID, destID) {
+        var index = -1;
+        var m;
+
+        //Find item to unmap
+        $.each(data.mapped, function (k, v) {
+
+            if (v.sourceID == sourceID && v.destID == destID) {
+                index = k;
+                m = v;
+            }
+
+        });
+        
+
+        var sObject = new Object();
+        var dObject = new Object();
+
+        sObject.id = m.sourceID;
+        sObject.displayName = m.srcName;
+        sObject.type = "Source";
+
+        dObject.id = m.destID;
+        dObject.displayName = m.destName;
+        dObject.type = "Destination";
+
+        //Add unmapped item to unmapped
+        data.unmapped.push(sObject);
+        data.unmapped.push(dObject);
+
+        //Remove from mapped
+        data.mapped.splice(index, 1);
+
+        //Remove the row from the mapped table
+        $("#mr-" + sourceID + "-" + destID).remove();
+
+        var sOpt = new Option(m.srcName, m.sourceID, false, false);
+        $('#umSource').append(sOpt);
+
+        var dOpt = new Option(m.destName, m.destID, false, false);
+        $('#umDest').append(dOpt);
+
+        console.log(data);
+    }
+
+    function getUnmapped(id) {
+        var unmapped = data.unmapped;
+        var unmap;
+
+        $.each(unmapped,function (k,v) {
+            if (v.id == id) {
+                unmap = v;
+            }
+        });
+
+        return unmap;
+    }
+
+    function getMapped(id) {
+        var mapped = data.mapped;
+        var map;
+
+        $.each(mapped,function (k,v) {
+            if (v.sourceID == id) {
+                map = v;
+            }
+        });
+
+        return map;
+    }
+
+    function newRow(d) {
+        var html = "";
+
+        html += '<tr id="mr-' + d.sourceID + '-' + d.destID + '">';
+        html += '<td>' + d.srcName + '</td>';
+        html += '<td>' + d.destName + '</td>';
+        html += '<td><button type="button" class="btn btn-success" onclick="unmap(\'' + d.sourceID + '\',\'' + d.destID + '\')">Unmap</button></td>';
+        html += '</tr>';
+
+        return html;
+    }
+
+    function removeUnmapped(d) {
+        $("#umSource option[value='" + d.sourceID + "']").remove();
+        $("#umDest option[value='" + d.destID + "']").remove();
+
+        removeFromUnmapped(d.sourceID,"Source");
+        removeFromUnmapped(d.destID, "Destination");
+    }
+
+    function removeFromUnmapped(id,type) {
+        var index
+
+        $.each(data.unmapped, function (k, v) {
+            if (v.id == id && v.type == type) {
+                index = k;
+            }
+        });
+
+        data.unmapped.splice(index,1);
+
+    }
+
+    function save() {
+        var source = $("#source").val();
+        var dest = $("#destination").val();
+        var d = JSON.stringify(data);
+
+        $.ajax(
+            {
+                url: '@Url.Action("SaveOUMapping", "Manage")',
+                type: "POST",
+                data: { source:source,destination:dest,data: d },
+                success: function (data, textStatus, jqXHR) {
+
+                    if(data.success)
+                        $("#ouMappingBox").html(displayMessage("Successfully saved Organisation Mapping", "success"));
+                    else
+                        $("#unmapMsgBox").html(displayMessage("Unable to save Organisation Mapping","error"));
+
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    
+                }
+            });
+
+         
+    }
+
+</script>

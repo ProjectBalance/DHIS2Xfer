@@ -1,0 +1,72 @@
+﻿
+
+@{
+    ViewData["Title"] = "Servers";
+}
+
+<h1>Servers</h1>
+
+<br />
+
+<a class="btn btn-primary" asp-area="" asp-controller="Manage" asp-action="AddServer">Add</a>
+
+<br />
+<br />
+<div class="row">
+    <div class="col-12">
+        <div id="msgBox">
+
+        </div>
+    </div>
+</div>
+<div>
+    <partial name="~/Views/Manage/Server/ServerList.cshtml" />
+</div>
+<script>
+
+    function SyncData(id) {
+
+        var seconds = 0;
+
+        var timer = setInterval(function () {
+            seconds++;
+
+            $("#msgBox").html('<i class="fa fa-spinner fa-pulse"></i></span> Syncing server data: ' + convertToMinutes(seconds));
+        }, 1000);
+
+
+
+        $.ajax(
+            {
+                url: '@Url.Action("SyncServer", "Manage")',
+                type: "POST",
+                data: {id:id},
+                success: function (data, textStatus, jqXHR) {
+                    clearInterval(timer);
+                    if (data.success) {
+                        $("#msgBox").html('<strong  style="color:green"> Sync complete: ' + convertToMinutes(seconds) + '</strong>');
+                        $("#lastSync-" + id).html(data.result);
+                    }
+                    else
+                        $("#msgBox").html('<strong  style="color:red">' + data.msg + '</strong>');
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+
+                }
+            });
+    }
+
+    function convertToMinutes(raw)
+    {
+        var time = parseInt(raw,10);
+        time = time < 0 ? 0 : time;
+
+        var minutes = Math.floor(time / 60);
+        var seconds = time % 60;
+
+        minutes = minutes < 10 ? "0"+minutes : minutes;
+        seconds = seconds < 10 ? "0"+seconds : seconds;
+
+        return minutes+":"+seconds;
+    }
+</script>

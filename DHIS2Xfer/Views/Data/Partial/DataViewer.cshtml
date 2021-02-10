@@ -1,0 +1,99 @@
+﻿@using Newtonsoft.Json.Linq
+
+@{ 
+    JObject meta = (JObject)ViewBag.meta;
+}
+
+<br />
+<div>
+    <div id="tableBox" class="col-12" style="max-height:500px; overflow-y:auto; overflow-x:auto; font-size:12px;">
+        <table class="table table-responsive table-striped" style="background-color:#FFF;">
+            <thead>
+                <tr>
+                    @if (ViewBag.type == "dataElements")
+                    {
+                        <th scope="col">Name</th>
+                        <th scope="col">Domain Type</th>
+                        <th scope="col">Value Type</th>
+                    }
+
+                    @if (ViewBag.type == "indicators")
+                    {
+                        <th scope="col">Name</th>
+                        <th scope="col">Numerator Description</th>
+                        <th scope="col">Denominator Description</th>
+                    }
+
+                    @if (ViewBag.type == "programIndicators")
+                    {
+                        <th scope="col">Name</th>
+                        <th scope="col">Analytic Type</th>
+                    }
+
+                </tr>
+            </thead>
+            <tbody>
+
+                @{
+
+                    foreach (JObject m in meta[ViewBag.type])
+                    {
+
+                        if (ViewBag.type == "dataElements")
+                        {
+                            <tr id="mr-@m.GetValue("id")" onclick="loadData('@m.GetValue("id")')">
+                                <td title="@m.GetValue("displayName").ToString()">@m.GetValue("displayName").ToString()</td>
+                                <td title="@m.GetValue("domainType").ToString()">@m.GetValue("domainType").ToString()</td>
+                                <td title="@m.GetValue("valueType").ToString()">@m.GetValue("valueType").ToString()</td>
+                            </tr>
+                        }
+
+                        if (ViewBag.type == "indicators")
+                        {
+                            <tr id="mr-@m.GetValue("id")" onclick="loadData('@m.GetValue("id")')">
+                                <td title="@m.GetValue("displayName").ToString()">@m.GetValue("displayName").ToString()</td>
+                                <td title="@m.GetValue("numeratorDescription").ToString()">@m.GetValue("numeratorDescription").ToString()</td>
+                                <td title="@m.GetValue("denominatorDescription").ToString()">@m.GetValue("denominatorDescription").ToString()</td>
+                            </tr>
+                        }
+
+                        if (ViewBag.type == "programIndicators")
+                        {
+                            <tr id="mr-@m.GetValue("id")" onclick="loadData('@m.GetValue("id")')">
+                                <td title="@m.GetValue("displayName").ToString()">@m.GetValue("displayName").ToString()</td>
+                                <td title="@m.GetValue("analyticsType").ToString()">@m.GetValue("analyticsType").ToString()</td>
+                            </tr>
+                        }
+                    }
+                }
+
+            </tbody>
+        </table>
+    </div>
+</div>
+<div id="resultBox">
+
+</div>
+
+<script type="text/javascript">
+
+    function loadData(id) {
+        var type = '@ViewBag.type';
+        var serverId = $("#server").val();
+
+        $.ajax({
+                url: '@Url.Action("LoadData", "Data")',
+                type: "GET",
+                data: { id: id, type: type, serverId: serverId },
+                success: function (data, textStatus, jqXHR) {
+
+                    $("#resultBox").html(data);
+
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+
+                }
+            });
+    }
+
+</script>

@@ -1,0 +1,263 @@
+﻿@using Newtonsoft.Json.Linq;
+
+
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Xfer</h1>
+
+<br />
+<div class="row">
+    <div class="col-12">
+        <a class="btn btn-primary" href="@Url.Action("Add","Xfer")">Add</a>
+    </div>
+</div>
+<br />
+<br />
+<div class="row">
+    <div class="col-12">
+        <div id="msgBox">
+
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-12">
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Period Start</th>
+                    <th scope="col">Period End</th>
+                    <th scope="col"># Jobs</th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody>
+
+                @{
+                    JArray jobs = (JArray)ViewBag.xfers;
+                    foreach (JObject j in jobs)
+                    {
+                        <tr>
+                            <td>@j.GetValue("name")</td>
+                            <td>@j.GetValue("periodStart")</td>
+                            <td>@j.GetValue("periodEnd")</td>
+                            <td>@j.GetValue("count")</td>
+                            <td>
+                                <a href="@Url.Action("Edit","Xfer", new { id = j.GetValue("id").ToString()})" class="btn btn-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+
+                                <button class="btn btn-success" type="button" onclick="confirmRunXfer('@j.GetValue("id").ToString()')" title="Run Xfer file" data-toggle="modal" data-target="#xferModal">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                                <a href="@Url.Action("downloadXfer","Xfer", new { id = j.GetValue("id").ToString()})" class="btn btn-secondary" title="Download Xfer file">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <a href="@Url.Action("generateManualImportFile","Xfer", new { id = j.GetValue("id").ToString()})" class="btn btn-secondary" title="Generate manual import file">
+                                    <i class="fas fa-file-download"></i>
+                                </a>
+                                <button class="btn btn-danger" type="button" onclick="confirmRemove('@j.GetValue("id").ToString()')" title="Remove" data-toggle="modal" data-target="#confirmModal">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+
+                    }
+                }
+
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="row">
+    <div class="col-12" style="max-height:500px; overflow-y:auto;">
+        <div id="runLog">
+
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="confirmModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <h4 class="modal-title">Confirm Xfer Removal</h4>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+
+            <!-- Modal body -->
+            <div class="modal-body">
+                Please confirm that you want to remove this xfer file.
+            </div>
+
+            <!-- Modal footer -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" data-dismiss="modal" onclick="removeXfer()">Confirm</button>
+
+                <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="xferModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <h4 class="modal-title">Run Xfer File</h4>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+
+            <!-- Modal body -->
+            <div class="modal-body">
+                You are about to run the selected Xfer file.
+                <br />
+                <h4>Options:</h4>
+                <div class="form-check">
+                    <label class="form-check-label">
+                        <input id="dryRun" type="checkbox" class="form-check-input" value="" checked>Dry Run
+                    </label>
+                </div>
+            </div>
+
+            <!-- Modal footer -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" data-dismiss="modal" onclick="RunXfer()">Confirm</button>
+
+                <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    var selectedXfer;
+
+    function confirmRunXfer(id) {
+        selectedXfer = id;
+    }
+
+    function RunXfer() {
+        var id = selectedXfer;
+        var dryRun = $("#dryRun").is(":checked");
+        var sessionID = create_UUID();
+
+        $("#runLog").html("");
+
+        var seconds = 0;
+
+        var timer = setInterval(function () {
+            seconds++;
+
+            $("#msgBox").html('<i class="fa fa-spinner fa-pulse"></i></span> Running selected Xfer file: ' + convertToMinutes(seconds));
+        }, 1000);
+
+        //Timer used to check the logs every 10 seconds while the xfer file is running
+        var pingTimer = setInterval(function () {
+
+            $.ajax(
+            {
+                url: '@Url.Action("CheckStatus", "Xfer")',
+                type: "POST",
+                data: { sessionID: sessionID },
+                success: function (data, textStatus, jqXHR) {
+                    DisplayLog(data);
+
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    runComplete = true;
+                }
+            });
+
+        }, 5000);
+        
+
+
+        $.ajax(
+            {
+                url: '@Url.Action("RunXfer", "Xfer")',
+                type: "POST",
+                data: { id: id, dryRun: dryRun, sessionID: sessionID },
+                success: function (data, textStatus, jqXHR) {
+                    clearInterval(timer);
+                    clearInterval(pingTimer);
+                    if (data.success) {
+                        $("#msgBox").html("Xfer file run complete: " + convertToMinutes(seconds));
+                        DisplayLog(data);
+                    }
+                    else
+                        $("#msgBox").html(data.msg);
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    runComplete = true;
+                }
+            });
+
+
+    }
+
+    function checkStatus() {
+
+    }
+
+    function DisplayLog(data) {
+        var result = data.log;
+        result = result.replace(/\n/g, "<br />");
+        var html = "";
+        html += "<div>";
+        html += result;
+        html += "</div>"
+
+        $("#runLog").html(html);
+
+        $("#runLog").animate({ scrollTop: $('#runLog').prop("scrollHeight") }, 1000);
+    }
+
+    function convertToMinutes(raw)
+    {
+        var time = parseInt(raw,10);
+        time = time < 0 ? 0 : time;
+
+        var minutes = Math.floor(time / 60);
+        var seconds = time % 60;
+
+        minutes = minutes < 10 ? "0"+minutes : minutes;
+        seconds = seconds < 10 ? "0"+seconds : seconds;
+
+        return minutes+":"+seconds;
+    }
+
+
+
+    function confirmRemove(id) {
+        selectedXfer = id;
+    }
+
+
+    function removeXfer() {
+        var url = '@Url.Action("Remove","Xfer")';
+        window.location = url + "/" + selectedXfer;
+
+    }
+
+    function create_UUID() {
+        var dt = new Date().getTime();
+        var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            var r = (dt + Math.random() * 16) % 16 | 0;
+            dt = Math.floor(dt / 16);
+            return (c == 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+        return uuid;
+    }
+</script>

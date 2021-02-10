@@ -1,0 +1,192 @@
+﻿@using Newtonsoft.Json.Linq
+
+@{
+    JArray servers = (JArray)ViewBag.servers;
+    JObject job = (JObject)ViewBag.job;
+    JObject meta = new JObject();
+    string jobID = "";
+    string jobName = "";
+    string source = "";
+    string destination = "";
+    string selected = "";
+    string destinationType = "";
+    string sourceType = "";
+
+    if(job != null)
+    {
+        meta = (JObject)job.GetValue("meta");
+        jobID = meta.GetValue("id").ToString();
+        jobName = meta.GetValue("name").ToString();
+        source =  meta.GetValue("source").ToString();
+        destination = meta.GetValue("destination").ToString();
+        sourceType =  meta.GetValue("sourceType").ToString();
+        destinationType = meta.GetValue("destinationType").ToString();
+    }
+}
+
+<div class="row jobsSDBox">
+    <div class="col-12">
+        <label for="jobName" style="font-weight:bold;">Job Name</label>
+        <input class="form-control" type="text" id="jobName" name="name" value="@jobName" />
+        <input type="hidden" id="jobID" name="jobID" value="@jobID" />
+    </div>
+</div>
+
+<div class="row jobsSDBox">
+    <div class="col-6">
+        <label for="source" style="font-weight:bold;">Source</label>
+        <select class="form-control" id="source" name="source">
+            <!option value="-1">Please Select</!option>
+
+            @foreach (var s in servers)
+            {
+                selected = "";
+                JObject server = (JObject)s;
+
+                if(server.GetValue("ID").ToString() == source)
+                {
+                    selected = "selected";
+                }
+
+                <!option value="@server.GetValue("ID").ToString()" @selected >
+                    @server.GetValue("name").ToString()
+                </!option>
+            }
+
+        </select>
+    </div>
+    <div class="col-6">
+        <label for="destination" style="font-weight:bold;">Destination</label>
+        <select class="form-control" id="destination" name="destination">
+            <!option value="-1">Please Select</!option>
+
+            @foreach (var s in servers)
+            {
+                selected = "";
+                JObject server = (JObject)s;
+
+                if (server.GetValue("ID").ToString() == destination)
+                {
+                    selected = "selected";
+                }
+
+                <!option value="@server.GetValue("ID").ToString()" @selected>
+                    @server.GetValue("name").ToString()
+                </!option>
+            }
+
+        </select>
+    </div>
+</div>
+<div class="row jobsSDBox">
+    @{ 
+        string typeSelected = "";
+    }
+    <div class="col-6">
+        <label for="serverType">Type</label>
+        <select class="form-control" id="sourceType" name="sourceType">
+            @{ if (sourceType == "dataElements") { typeSelected = "selected"; } else { typeSelected = ""; } }
+            <!option value="dataElements" @typeSelected>Data Element</!option>
+            @{ if (sourceType == "indicators") { typeSelected = "selected"; } else { typeSelected = ""; }  }
+            <!option value="indicators" @typeSelected>Indicator</!option>
+            @{ if (sourceType == "programIndicators") { typeSelected = "selected"; } else { typeSelected = ""; }  }
+            <!option value="programIndicators" @typeSelected>Program Indicator</!option>
+        </select>
+    </div>
+    <div class="col-6">
+        <label for="serverType">Type</label>
+        <select class="form-control" id="destinationType" name="destinationType">
+            <!option value="dataElements">Data Element</!option>
+        </select>
+    </div>
+</div>
+<br />
+<div class="row">
+    <div class="col-12">
+        <button type="button" class="btn btn-primary" onclick="loadServerMeta()">Load</button>
+        <button type="button" class="btn btn-secondary" onclick="cancel()">Cancel</button>
+    </div>
+</div>
+<br />
+<div id="jobBox">
+
+</div>
+<script type="text/javascript">
+
+    $(function () {
+        @{ 
+            if(jobID != "")
+            {
+                @Html.Raw("loadServerMeta();")
+            }
+        }
+    });
+
+    function loadServerMeta() {
+        var jobID = $("#jobID").val();
+        var jobName = $("#jobName").val();
+        var source = $("#source").val();
+        var dest = $("#destination").val();
+        var sourceType = $("#sourceType").val();
+        var destType = $("#destinationType").val();
+
+        if (source == -1 || dest == -1) {
+            $("#jobBox").html(displayMessage("Please select both a source and destination","error"));
+        }
+        else if(source == dest){
+             $("#jobBox").html(displayMessage("Source and destination cannot be the same","error"));
+        }
+        else {
+
+            $("#jobBox").html(displayMessage("Loading...", "loading"));
+
+            $.ajax(
+            {
+                url: '@Url.Action("LoadJobMeta", "Job")',
+                type: "POST",
+                data: {id:jobID,name:jobName, source: source,destination:dest, sourceType:sourceType,destinationType:destType },
+                success: function (data, textStatus, jqXHR) {
+
+                    $("#jobBox").html(data);
+
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+
+                }
+            });
+        }
+
+    }
+
+    function cancel() {
+        window.location.href = "@Url.Action("Index","Job")";
+    }
+
+    function displayMessage(msg, type) {
+        var html = "";
+        var c = "";
+        var i = "";
+
+        if (type == "error") {
+            c = "orgUnitErrorMsg";
+            i = "exclamation-circle";
+        }
+
+        if (type == "success") {
+            c = "orgUnitSuccessMsg";
+            i = "check-circle";
+        }
+
+        if (type == "loading") {
+            c = "orgUnitLoadingMsg";
+            i = "spinner fa-pulse";
+        }
+
+        html += "<div class=\"" + c + "\">";
+        html += '<i class="fa fa-' + i + '"></i></span>  '
+        html += msg;
+        html += "</div>";
+
+        return html;
+    }
+</script>
