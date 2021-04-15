@@ -232,7 +232,7 @@ namespace XferCore
                                     xfer["storedBy"] = destinationServer.GetValue("user").ToString(); //Since its optional to use the username, we can skip an api hit to credentials
                                     xfer["created"] = DateTime.Now.ToString("yyyy-MM-dd");
                                     xfer["updated"] = DateTime.Now.ToString("yyyy-MM-dd");
-                                    xfer["comment"] = "Imported from tracker";
+                                    xfer["comment"] = "Imported";
 
                                     xferList.Add(xfer);
                                 }

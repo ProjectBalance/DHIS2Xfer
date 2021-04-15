@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <None Include="Areas\Identity\Pages\_ViewStart.cshtml" />
+    <None Include="wwwroot\dhis2xfer.png" />
   </ItemGroup>
 
 
